@@ -1,4 +1,4 @@
-# Aligner Tracker 🦷
+# Aligner Tracker 
 
 A free, phone-first tracker for clear aligners (Invisalign and similar). Log every break with one tap, see your daily wear time fill up like a fitness ring, get nudged when your aligners have been out too long, and never miss a tray change.
 
