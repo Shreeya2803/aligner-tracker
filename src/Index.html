@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+<style>
+  :root{
+    --bg:#FAF7F2; --card:#FFFFFF; --ink:#1D1B22; --muted:#7A7585; --line:#ECE6DD; --soft:#F3EEE6;
+    --mint:#2EC4B6; --coral:#FF6B6B; --sunny:#FFD166; --green:#3DDC97; --amber:#FFB547; --red:#FF6B6B;
+    --accent:var(--mint);
+  }
+  @media (prefers-color-scheme:dark){
+    :root{ --bg:#14121A; --card:#1F1C27; --ink:#F4F1EC; --muted:#9C97A8; --line:#2C2836; --soft:#26222F; }
+  }
+  body.out{ --accent:var(--coral); }
+  *{ box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+  body{ font-family:Inter,system-ui,sans-serif; background:var(--bg); color:var(--ink); min-height:100vh;
+        transition:background .3s; -webkit-font-smoothing:antialiased; }
+  button{ font:inherit; color:inherit; }
+  .app{ max-width:440px; margin:0 auto; padding:20px 18px calc(100px + env(safe-area-inset-bottom)); }
+  .screen{ display:none; } .screen.active{ display:block; animation:fade .25s ease-out; }
+  @keyframes fade{ from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none} }
+  .num,h1,h2,h3{ font-family:Outfit,sans-serif; font-variant-numeric:tabular-nums; }
+  .page-title{ font-family:Outfit,sans-serif; font-size:26px; font-weight:700; margin:4px 2px 14px; }
+
+  /* Home */
+  .header{ text-align:center; margin:8px 0 6px; }
+  .header h1{ font-size:20px; font-weight:600; }
+  .sub{ color:var(--muted); font-size:14px; margin-top:3px; }
+  .ring-wrap{ position:relative; width:244px; height:244px; margin:14px auto 8px; }
+  .ring-wrap svg{ transform:rotate(-90deg); }
+  .track{ stroke:var(--line); }
+  .prog{ stroke:var(--accent); transition:stroke-dashoffset .9s cubic-bezier(.2,.8,.2,1), stroke .3s; }
+  .ring-center{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:0 28px; }
+  .big{ font-size:40px; font-weight:600; letter-spacing:-.5px; line-height:1.1; white-space:nowrap; }
+  .pill{ display:block; width:fit-content; margin:10px auto 0; padding:10px 18px; border-radius:999px;
+         background:var(--card); border:1px solid var(--line); font-weight:500; font-size:14px; transition:all .3s; }
+  .pill.over{ color:#fff; background:var(--red); border-color:transparent; }
+  .btn-wrap{ display:flex; justify-content:center; margin:28px 0 18px; }
+  .hero{ width:136px; height:136px; border-radius:50%; border:none; background:var(--accent); color:#fff;
+         font-family:Outfit,sans-serif; font-size:20px; font-weight:600; cursor:pointer;
+         box-shadow:0 12px 30px -10px var(--accent); transition:transform .15s ease-out, background .3s; }
+  .hero:active{ transform:scale(.96); }
+  .hero:disabled{ opacity:.85; }
+  body.out .hero{ animation:pulse 1.8s ease-in-out infinite; }
+  @keyframes pulse{ 0%,100%{ box-shadow:0 0 0 0 rgba(255,107,107,.45) } 50%{ box-shadow:0 0 0 18px rgba(255,107,107,0) } }
+  .chips{ display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+  .chip{ padding:7px 13px; border-radius:999px; background:var(--card); border:1px solid var(--line); font-size:13px; color:var(--muted); }
+  .chip b{ color:var(--ink); font-weight:600; }
+  .sync{ text-align:center; font-size:12px; color:var(--muted); margin-top:12px; min-height:16px; }
+
+  /* Mascot */
+  .pearl{ display:block; overflow:visible; }
+  .pearl .body{ animation:bob 2.6s ease-in-out infinite; transform-box:fill-box; transform-origin:50% 100%; }
+  .pearl .eye{ animation:blink 4.2s infinite; transform-box:fill-box; transform-origin:center; }
+  .pearl.celebrating .body{ animation:bounce .9s cubic-bezier(.3,1.6,.5,1) infinite; }
+  .pearl.worried .body{ animation:wobble .5s ease-in-out infinite; }
+  .pearl.sleepy .body{ animation:bob 4s ease-in-out infinite; }
+  .pearl .zz{ animation:float 2.4s ease-in-out infinite; }
+  @keyframes bob{ 0%,100%{ transform:translateY(0) } 50%{ transform:translateY(-3px) } }
+  @keyframes bounce{ 0%,100%{ transform:translateY(0) scale(1) } 40%{ transform:translateY(-9px) scale(1.03,.97) } }
+  @keyframes wobble{ 0%,100%{ transform:rotate(-3deg) } 50%{ transform:rotate(3deg) } }
+  @keyframes blink{ 0%,93%,100%{ transform:scaleY(1) } 96%{ transform:scaleY(.1) } }
+  @keyframes float{ 0%{ opacity:0; transform:translate(0,4px) } 40%{ opacity:1 } 100%{ opacity:0; transform:translate(6px,-10px) } }
+  .buddy{ display:flex; align-items:center; gap:10px; margin:10px 4px 0; min-height:72px; }
+  .buddy .pearl{ width:62px; height:68px; flex:none; }
+  .bubble{ position:relative; background:var(--card); border:1px solid var(--line); border-radius:18px; padding:10px 14px;
+           font-size:14px; line-height:1.35; flex:1; animation:fade .3s ease-out; }
+  .bubble::before{ content:''; position:absolute; left:-7px; top:50%; width:12px; height:12px; background:var(--card);
+           border-left:1px solid var(--line); border-bottom:1px solid var(--line); transform:translateY(-50%) rotate(45deg); }
+  .bubble b{ display:block; font:600 11px Inter,sans-serif; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:2px; }
+  .buddy.hop .pearl .body{ animation:bounce .9s cubic-bezier(.3,1.6,.5,1) 2; }
+
+  /* Journey map */
+  #journey > svg{ width:100%; height:auto; display:block; overflow:visible; }
+  .journey .trail-done{ stroke-dasharray:1; stroke-dashoffset:1; animation:draw 1.4s .2s cubic-bezier(.4,0,.2,1) forwards; }
+  @keyframes draw{ to{ stroke-dashoffset:0 } }
+  .journey .stop{ cursor:pointer; }
+  .journey .now-ring{ animation:ping 1.8s ease-out infinite; transform-box:fill-box; transform-origin:center; }
+  @keyframes ping{ 0%{ transform:scale(1); opacity:.6 } 100%{ transform:scale(1.7); opacity:0 } }
+  .journey .walker{ transition:transform 1s cubic-bezier(.3,1.4,.5,1); }
+  .stop-info{ margin-top:10px; padding:10px 12px; border-radius:14px; background:var(--soft); font-size:13px; color:var(--muted); min-height:40px; }
+  .stop-info b{ color:var(--ink); }
+  .empty-pearl{ display:flex; align-items:center; gap:10px; }
+  .empty-pearl .pearl{ width:44px; height:48px; flex:none; }
+
+  /* Cards */
+  .card{ background:var(--card); border:1px solid var(--line); border-radius:24px; padding:18px; margin-bottom:14px; }
+  .card h2{ font-size:15px; font-weight:600; color:var(--muted); margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; }
+  .card h2 small{ font:500 12px Inter,sans-serif; }
+
+  /* Tray */
+  .tray-big{ font-family:Outfit,sans-serif; font-size:48px; font-weight:700; line-height:1.1; margin-bottom:12px; }
+  .tray-big span{ font-size:20px; color:var(--muted); font-weight:500; }
+  .bar{ height:12px; border-radius:99px; background:var(--line); overflow:hidden; }
+  .bar > i{ display:block; height:100%; width:0; background:var(--mint); border-radius:99px; transition:width .9s cubic-bezier(.2,.8,.2,1); }
+  .row{ display:flex; justify-content:space-between; font-size:14px; margin-top:10px; color:var(--muted); }
+  .row b{ color:var(--ink); font-weight:600; }
+  .warn{ background:rgba(255,181,71,.16); border-radius:16px; padding:12px 14px; font-size:13px; margin-bottom:12px; display:none; }
+  .primary{ width:100%; padding:16px; border:none; border-radius:18px; background:var(--mint); color:#fff;
+            font-family:Outfit,sans-serif; font-size:17px; font-weight:600; cursor:pointer; transition:transform .15s; }
+  .primary:active{ transform:scale(.98); }
+  .primary:disabled{ opacity:.45; }
+  .ghost{ background:transparent; color:var(--muted); border:1px solid var(--line); margin-top:10px; }
+  .danger{ background:transparent; color:var(--red); border:1px solid var(--line); margin-top:10px; }
+
+  /* History */
+  .tiles{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:14px; }
+  .tile{ background:var(--card); border:1px solid var(--line); border-radius:20px; padding:14px 12px; }
+  .tile .v{ font-family:Outfit,sans-serif; font-size:24px; font-weight:700; line-height:1.1; }
+  .tile .v small{ font-size:14px; font-weight:500; color:var(--muted); }
+  .tile .l{ font-size:12px; color:var(--muted); margin-top:4px; line-height:1.3; }
+  .heat{ display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
+  .heat .wd{ font-size:11px; color:var(--muted); text-align:center; padding-bottom:2px; }
+  .cell{ aspect-ratio:1; border:none; border-radius:10px; background:var(--soft); position:relative; cursor:pointer;
+         font-size:11px; font-weight:500; color:rgba(29,27,34,.65); animation:pop .35s cubic-bezier(.2,1.4,.4,1) both; }
+  .cell.s-green{ background:var(--green); } .cell.s-amber{ background:var(--amber); } .cell.s-red{ background:var(--red); color:#fff; }
+  .cell.s-none{ color:var(--muted); cursor:default; }
+  .cell.s-today{ background:transparent; box-shadow:inset 0 0 0 2px var(--mint); color:var(--ink); }
+  .cell.sel{ outline:2.5px solid var(--ink); outline-offset:2px; }
+  .cell .sh{ position:absolute; top:-5px; right:-5px; font-size:12px; }
+  .legend{ display:flex; gap:12px; flex-wrap:wrap; margin-top:12px; font-size:12px; color:var(--muted); }
+  .legend i{ display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:5px; vertical-align:-1px; }
+  .day-head{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; }
+  .day-head b{ font-family:Outfit,sans-serif; font-size:17px; }
+  .brk{ display:flex; justify-content:space-between; align-items:center; width:100%; text-align:left; padding:11px 12px;
+        border:1px solid var(--line); background:var(--bg); border-radius:14px; margin-bottom:8px; cursor:pointer; font-size:14px; }
+  .brk .d{ color:var(--muted); font-size:13px; }
+  .brk.open{ border-color:var(--coral); }
+  .add{ width:100%; padding:11px; border:1.5px dashed var(--line); border-radius:14px; background:transparent; color:var(--muted); font-weight:500; cursor:pointer; }
+  .empty{ color:var(--muted); font-size:13px; padding:4px 0 10px; }
+  .tr{ display:grid; grid-template-columns:56px 1fr 46px 30px; gap:10px; align-items:center; margin-bottom:10px; font-size:14px; }
+  .tr .tb{ height:10px; border-radius:99px; background:var(--line); position:relative; overflow:visible; }
+  .tr .tb i{ display:block; height:100%; border-radius:99px; background:var(--mint); transition:width .9s cubic-bezier(.2,.8,.2,1); }
+  .tr .tb u{ position:absolute; top:-4px; bottom:-4px; width:2px; background:var(--ink); opacity:.35; border-radius:2px; }
+  .tr .n{ color:var(--muted); } .tr .n b{ color:var(--ink); }
+  .grade{ display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:9px;
+          font-family:Outfit,sans-serif; font-weight:700; font-size:15px; }
+  .g-A{ background:rgba(61,220,151,.2); color:#18a86b; } .g-B{ background:rgba(255,181,71,.22); color:#c47f0a; } .g-C{ background:rgba(255,107,107,.18); color:#e04848; }
+  .bests{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .best{ background:linear-gradient(160deg, rgba(255,209,102,.28), rgba(255,209,102,.08)); border-radius:18px; padding:14px 12px; }
+  .best .v{ font-family:Outfit,sans-serif; font-size:22px; font-weight:700; }
+  .best .l{ font-size:12px; color:var(--muted); margin-top:2px; }
+
+  /* Settings */
+  .field{ display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--line); font-size:15px; }
+  .field:last-child{ border-bottom:none; }
+  .field small{ display:block; color:var(--muted); font-size:12px; margin-top:2px; }
+  .field input{ width:84px; padding:9px 10px; border-radius:12px; border:1px solid var(--line); background:var(--bg); color:var(--ink);
+                font:600 16px Outfit,sans-serif; text-align:center; }
+  .link{ display:block; text-align:center; color:var(--muted); font-size:13px; margin-top:12px; }
+  .note{ font-size:13px; color:var(--muted); margin-bottom:12px; line-height:1.45; }
+
+  /* First-run setup */
+  #setup{ display:none; }
+  body.setup-mode #setup{ display:block; }
+  body.setup-mode .screen, body.setup-mode nav{ display:none !important; }
+  .welcome{ display:flex; align-items:center; gap:12px; margin:8px 0 16px; }
+  .welcome .pearl{ width:72px; height:79px; flex:none; }
+  .welcome h1{ font-size:24px; font-weight:700; line-height:1.15; }
+  .field input[type=date]{ width:150px; font-size:15px; }
+
+  /* Nav */
+  nav{ position:fixed; bottom:0; left:0; right:0; background:var(--card); border-top:1px solid var(--line);
+       display:flex; justify-content:space-around; padding:10px 0 calc(10px + env(safe-area-inset-bottom)); z-index:5; }
+  nav button{ background:none; border:none; font:500 12px Inter,sans-serif; color:var(--muted);
+              display:flex; flex-direction:column; align-items:center; gap:5px; padding:4px 14px; cursor:pointer; }
+  nav button.active{ color:var(--ink); }
+  nav button.active .dot{ background:var(--accent); }
+  .dot{ width:6px; height:6px; border-radius:50%; background:transparent; }
+
+  /* Modals + toast */
+  .overlay{ position:fixed; inset:0; background:rgba(20,18,26,.55); display:none; align-items:center; justify-content:center; z-index:20; padding:24px; }
+  .overlay.show{ display:flex; }
+  .modal{ background:var(--card); border-radius:28px; padding:26px 22px 20px; text-align:center; max-width:360px; width:100%;
+          animation:pop .45s cubic-bezier(.2,1.4,.4,1); }
+  @keyframes pop{ from{ transform:scale(.8); opacity:0 } to{ transform:none; opacity:1 } }
+  .modal h3{ font-size:24px; font-weight:700; margin-bottom:6px; }
+  .modal p{ color:var(--muted); font-size:14px; margin-bottom:18px; line-height:1.45; }
+  .badge{ width:96px; height:96px; border-radius:30px; margin:0 auto 14px; display:none; align-items:center; justify-content:center;
+          font:700 56px Outfit,sans-serif; }
+  .form label{ display:block; text-align:left; font-size:13px; color:var(--muted); margin:10px 0 6px; }
+  .form input{ width:100%; padding:12px; border-radius:14px; border:1px solid var(--line); background:var(--bg); color:var(--ink); font:500 16px Inter,sans-serif; }
+  .form .err{ color:var(--red); font-size:13px; min-height:18px; margin:10px 0 4px; }
+  .toast{ position:fixed; left:50%; bottom:calc(90px + env(safe-area-inset-bottom)); transform:translateX(-50%) translateY(20px);
+          background:var(--ink); color:var(--bg); padding:10px 16px; border-radius:14px; font-size:13px; opacity:0;
+          transition:all .25s; pointer-events:none; max-width:90vw; z-index:30; }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- FIRST-RUN SETUP -->
+  <section id="setup">
+    <div class="welcome"><div id="setup-pearl"></div><div><h1>Hi! Let's set up your aligners.</h1><div class="sub">Takes a minute. You can change all of this later in Settings.</div></div></div>
+    <div class="card">
+      <h2>Your plan</h2>
+      <div class="field"><div>Trays in this series<small>from your orthodontist's plan</small></div><input type="number" inputmode="numeric" id="s-total_trays" placeholder="e.g. 20"></div>
+      <div class="field"><div>Tray you're on now</div><input type="number" inputmode="numeric" id="s-current_tray" value="1"></div>
+      <div class="field"><div>Started this tray on</div><input type="date" id="s-start_date"></div>
+      <div class="field"><div>Days per tray</div><input type="number" inputmode="numeric" id="s-days_per_tray" value="14"></div>
+      <div class="field"><div>Daily wear target<small>hours; 20–22 is typical</small></div><input type="number" inputmode="decimal" id="s-target_hours" value="22"></div>
+    </div>
+    <div class="card">
+      <h2>Your tooth buddy</h2>
+      <div class="field"><div>Name</div><input type="text" maxlength="16" id="s-mascot_name" value="Pearl" style="width:120px"></div>
+    </div>
+    <button class="primary" id="setup-go">Let's go</button>
+  </section>
+
+  <!-- HOME -->
+  <section id="home" class="screen active">
+    <div class="header">
+      <h1 id="h-tray">Loading…</h1>
+      <div class="sub" id="h-due">&nbsp;</div>
+    </div>
+    <div class="buddy" id="buddy"><div id="buddy-pearl"></div><div class="bubble"><b id="buddy-name">Pearl</b><span id="buddy-line">…</span></div></div>
+    <div class="ring-wrap">
+      <svg width="244" height="244" viewBox="0 0 244 244">
+        <circle class="track" cx="122" cy="122" r="104" fill="none" stroke-width="18"/>
+        <circle id="prog" class="prog" cx="122" cy="122" r="104" fill="none" stroke-width="18" stroke-linecap="round"/>
+      </svg>
+      <div class="ring-center">
+        <div class="big num" id="big">–</div>
+        <div class="sub" id="big-sub">&nbsp;</div>
+      </div>
+    </div>
+    <span class="pill num" id="budget">&nbsp;</span>
+    <div class="btn-wrap"><button class="hero" id="hero" disabled>…</button></div>
+    <div class="chips"><span class="chip" id="streak"></span><span class="chip" id="breaks"></span></div>
+    <div class="sync" id="sync"></div>
+  </section>
+
+  <!-- TRAY -->
+  <section id="tray" class="screen">
+    <div class="page-title">Tray</div>
+    <div class="card">
+      <h2>Current tray <span id="t-grade"></span></h2>
+      <div class="tray-big num" id="t-no">–</div>
+      <div class="bar"><i id="t-bar"></i></div>
+      <div class="row"><span id="t-day"></span><span>Due <b id="t-due"></b></span></div>
+    </div>
+    <div class="card journey">
+      <h2>Your journey <small id="o-pct"></small></h2>
+      <div id="journey"></div>
+      <div class="stop-info" id="stop-info"></div>
+    </div>
+    <div class="warn" id="warn"></div>
+    <button class="primary" id="next" disabled>Start next tray</button>
+  </section>
+
+  <!-- HISTORY -->
+  <section id="history" class="screen">
+    <div class="page-title">History</div>
+    <div class="tiles" id="tiles"></div>
+    <div class="card">
+      <h2>Last 5 weeks <small id="shield-note"></small></h2>
+      <div class="heat" id="heat"></div>
+      <div class="legend">
+        <span><i style="background:var(--green)"></i>On target</span>
+        <span><i style="background:var(--amber)"></i>Close</span>
+        <span><i style="background:var(--red)"></i>Under</span>
+        <span>🛡 Shield used</span>
+      </div>
+    </div>
+    <div class="card" id="day-card"></div>
+    <div class="card"><h2>Tray grades <small>avg hours / day</small></h2><div id="trays"></div></div>
+    <div class="card"><h2>Personal bests</h2><div class="bests" id="bests"></div></div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section id="settings" class="screen">
+    <div class="page-title">Settings</div>
+    <div class="card">
+      <h2>Targets</h2>
+      <div class="field"><div>Daily wear target<small>hours</small></div><input type="number" inputmode="decimal" id="f-target_hours"></div>
+      <div class="field"><div>Amber below target<small>hours; under this is red</small></div><input type="number" inputmode="decimal" id="f-amber_hours"></div>
+      <div class="field"><div>Days per tray</div><input type="number" inputmode="numeric" id="f-days_per_tray"></div>
+      <div class="field"><div>Trays in this series<small>raise it for refinements</small></div><input type="number" inputmode="numeric" id="f-total_trays"></div>
+    </div>
+    <div class="card">
+      <h2>Reminders</h2>
+      <div class="field"><div>Out-too-long nudge<small>minutes</small></div><input type="number" inputmode="numeric" id="f-nudge_minutes"></div>
+      <div class="field"><div>Nightly check-in<small>hour, 0–23</small></div><input type="number" inputmode="numeric" id="f-checkin_hour"></div>
+    </div>
+    <div class="card">
+      <h2>Mascot</h2>
+      <div class="field"><div>Name<small>your tooth buddy</small></div><input type="text" maxlength="16" id="f-mascot_name" style="width:120px"></div>
+    </div>
+    <button class="primary" id="save-settings">Save settings</button>
+    <div class="card" id="demo-card" style="margin-top:14px; display:none">
+      <h2>Demo data</h2>
+      <p class="note">Practice history is loaded so you can explore the app. Remove it before you start relying on your stats.</p>
+      <button class="primary danger" id="clear-demo" style="margin-top:0">Remove demo data</button>
+    </div>
+    <a class="link" id="sheet-link" href="#" target="_blank">Open the Google Sheet</a>
+  </section>
+</div>
+
+<nav>
+  <button class="active" data-go="home"><span class="dot"></span>Home</button>
+  <button data-go="tray"><span class="dot"></span>Tray</button>
+  <button data-go="history"><span class="dot"></span>History</button>
+  <button data-go="settings"><span class="dot"></span>Settings</button>
+</nav>
+
+<!-- message modal -->
+<div class="overlay" id="ov">
+  <div class="modal">
+    <div id="m-pearl" style="width:84px; height:92px; margin:-6px auto 6px; display:none"></div>
+    <div class="badge" id="m-badge"></div>
+    <h3 id="m-title"></h3>
+    <p id="m-sub"></p>
+    <button class="primary" id="m-ok">OK</button>
+    <button class="primary ghost" id="m-cancel">Not yet</button>
+  </div>
+</div>
+
+<!-- break editor -->
+<div class="overlay" id="ed">
+  <div class="modal form">
+    <h3 id="e-title">Edit break</h3>
+    <label for="e-out">Took them out</label>
+    <input type="datetime-local" id="e-out">
+    <label for="e-in">Put them back in</label>
+    <input type="datetime-local" id="e-in">
+    <div class="err" id="e-err"></div>
+    <button class="primary" id="e-save">Save</button>
+    <button class="primary danger" id="e-del">Delete break</button>
+    <button class="primary ghost" id="e-cancel">Cancel</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const C = 2 * Math.PI * 104;
+  const COLORS = ['#2EC4B6', '#FF6B6B', '#FFD166', '#3DDC97'];
+  let S = null, busy = false, celebrated = false, selKey = null, editing = null, reloading = false;
+
+  const prog = $('prog');
+  prog.style.strokeDasharray = C;
+  prog.style.strokeDashoffset = C;
+
+  /* ---------- server calls ---------- */
+  const gs = (fn, ...args) => new Promise((res, rej) =>
+    google.script.run.withSuccessHandler(res).withFailureHandler(rej)[fn](...args));
+  const isNet = e => !navigator.onLine || /network|fetch|connection|timed? ?out/i.test((e && e.message) || String(e));
+
+  /* ---------- formatting ---------- */
+  const hm = m => { m = Math.max(0, Math.round(m)); const h = Math.floor(m / 60), r = m % 60; return h ? `${h}h ${r}m` : `${r}m`; };
+  const hms = s => [s / 3600, (s % 3600) / 60, s % 60].map(x => String(Math.floor(x)).padStart(2, '0')).join(':');
+  const fmtDate = (k, yr) => new Date(k + 'T12:00:00').toLocaleDateString('en-GB',
+    yr ? { day: 'numeric', month: 'short', year: 'numeric' } : { day: 'numeric', month: 'short' });
+  const fmtDay = k => new Date(k + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+  const fmtTime = ms => new Date(ms).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  const pad = n => String(n).padStart(2, '0');
+  const toInput = ms => { const d = new Date(ms); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+  const keyOf = ms => { const d = new Date(ms); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
+  const h1 = x => (Math.round(x * 10) / 10).toFixed(1);
+
+  /* ---------- storage + offline queue ---------- */
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  };
+  const queue = () => { try { return JSON.parse(store.get('tapQueue') || '[]'); } catch (e) { return []; } };
+  const saveQueue = q => store.set('tapQueue', JSON.stringify(q));
+  async function flush() {
+    let q = queue(), last = null;
+    while (q.length) {
+      last = await gs('toggle', q[0].action, q[0].ts);
+      q.shift(); saveQueue(q);
+    }
+    return last;
+  }
+  function syncNote() {
+    const n = queue().length;
+    $('sync').textContent = n ? `${n} tap${n > 1 ? 's' : ''} waiting to sync` : '';
+  }
+
+  /* ---------- data ---------- */
+  async function load() {
+    try {
+      await flush();
+      setState(await gs('getState'));
+    } catch (e) {
+      if (isNet(e)) toast('You\'re offline. Taps are saved and will sync.'); else fail(e);
+    }
+    syncNote();
+  }
+  function setState(s) {
+    if (s.needsSetup) { showSetup(s); return; }
+    document.body.classList.remove('setup-mode');
+    S = s;
+    S.offset = Date.now() - s.now;
+    celebrated = store.get('ring-' + S.todayStart) === '1';
+    const days = S.history.days;
+    if (!selKey || !days.some(d => d.key === selKey)) selKey = days[days.length - 1].key;
+    render(); renderHistory(); renderJourney(); fillSettings();
+  }
+  function serverNow() { return Date.now() - S.offset; }
+
+  function live() {
+    const now = serverNow();
+    if (now >= S.todayEnd) {                                   // midnight passed: fetch the new day once
+      if (!reloading) { reloading = true; load().then(() => { reloading = false; }); }
+      return null;
+    }
+    const elapsed = (now - S.todayStart) / 6e4;
+    const openMin = S.openOutMs ? (now - Math.max(S.openOutMs, S.todayStart)) / 6e4 : 0;
+    const out = S.closedOutMin + openMin;
+    return {
+      worn: Math.max(0, elapsed - out), out, openMin,
+      budget: (24 - S.target) * 60 - out,
+      isOut: !!S.openOutMs,
+      openSec: S.openOutMs ? Math.max(0, (now - S.openOutMs) / 1000) : 0
+    };
+  }
+
+  /* ---------- Home + Tray (every second) ---------- */
+  function render() {
+    if (!S || S.needsSetup) return;
+    const L = live(); if (!L) return;
+    const t = S.tray;
+    document.body.classList.toggle('out', L.isOut);
+
+    $('h-tray').textContent = `Tray ${t.no} of ${t.total} · Day ${t.day}`;
+    $('h-due').textContent = t.day > t.planned ? 'Tray change is due' : `Next tray due ${fmtDate(t.due)}`;
+    prog.style.strokeDashoffset = C * (1 - Math.min(1, L.worn / (S.target * 60)));
+
+    if (L.isOut) {
+      $('big').textContent = hms(L.openSec);
+      $('big-sub').textContent = L.openSec / 60 >= 30 ? 'Snack attack? Time to pop them back in' : 'out this break';
+    } else {
+      $('big').textContent = hm(L.worn);
+      $('big-sub').textContent = `of ${S.target}h worn today`;
+    }
+    const b = $('budget');
+    if (L.budget >= 0) { b.textContent = `${hm(L.budget)} break budget left`; b.classList.remove('over'); }
+    else { b.textContent = `Over budget by ${hm(-L.budget)}`; b.classList.add('over'); }
+
+    $('hero').disabled = busy;
+    $('hero').textContent = L.isOut ? 'Put back in' : 'Take out';
+
+    const closed = L.worn >= S.target * 60;
+    const streak = S.streak + (closed ? 1 : 0);
+    $('streak').innerHTML = (streak ? `🔥 <b>${streak}</b>-day streak` : 'Streak starts today') +
+      (S.shields ? ` · 🛡 <b>${S.shields}</b>` : '');
+    $('breaks').innerHTML = `<b>${S.breaks}</b> break${S.breaks === 1 ? '' : 's'} today`;
+    if (closed && !celebrated) celebrateRing();
+
+    $('t-no').innerHTML = `${t.no}<span> / ${t.total}</span>`;
+    $('t-bar').style.width = Math.min(100, (t.day / t.planned) * 100) + '%';
+    $('t-day').innerHTML = t.day > t.planned ? `Day <b>${t.day}</b> · switch due` : `Day <b>${t.day}</b> of ${t.planned}`;
+    $('t-due').textContent = fmtDate(t.due);
+    const cur = S.history.trays.find(x => x.no === t.no);
+    $('t-grade').innerHTML = cur ? `<span class="grade g-${cur.grade}" title="${h1(cur.avg)}h avg">${cur.grade}</span>` : '';
+    buddy(L);
+
+    const w = $('warn');
+    if (t.redDays >= 3) {
+      w.style.display = 'block';
+      w.textContent = `${t.redDays} days under ${S.amber}h on this tray. Consider checking with your orthodontist before switching.`;
+    } else w.style.display = 'none';
+    $('next').textContent = t.no < t.total ? `Start tray ${t.no + 1}` : 'Last tray of this series';
+    $('next').disabled = busy || t.no >= t.total;
+  }
+
+  /* ---------- Pearl, the mascot ---------- */
+  const INK = '#1D1B22', GRADE_FILL = { A: '#3DDC97', B: '#FFB547', C: '#FF6B6B' };
+  const escHtml = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  function pearl(mood, attrs) {
+    const line = 'fill="none" stroke="' + INK + '" stroke-width="3" stroke-linecap="round"';
+    const open = `<ellipse class="eye" cx="40" cy="40" rx="3.6" ry="4.6" fill="${INK}"/><ellipse class="eye" cx="60" cy="40" rx="3.6" ry="4.6" fill="${INK}"/>`;
+    const smiley = `<path d="M35.5 41 Q40 35 44.5 41 M55.5 41 Q60 35 64.5 41" ${line}/>`;
+    const sleepy = `<path d="M35.5 40 Q40 43.5 44.5 40 M55.5 40 Q60 43.5 64.5 40" ${line}/>`;
+    const grin = `<path d="M41 49 Q50 63 59 49 Z" fill="#FF6B6B" stroke="${INK}" stroke-width="2.5" stroke-linejoin="round"/>`;
+    const faces = {
+      happy: open + `<path d="M42 51 Q50 59 58 51" ${line}/>`,
+      proud: smiley + `<path d="M42 51 Q50 59 58 51" ${line}/>`,
+      snacking: open + grin,
+      worried: open + `<path d="M41 55 Q45.5 51 50 55 Q54.5 59 59 55" ${line}/><path d="M81 22 q4 7 0 9 q-4 -2 0 -9z" fill="#7FD3F7"/>`,
+      sleepy: sleepy + `<circle cx="50" cy="53" r="2.8" fill="${INK}"/><text class="zz" x="80" y="20" font-family="Outfit,sans-serif" font-weight="700" font-size="15" fill="#9C97A8">z</text>`,
+      celebrating: smiley + grin
+    };
+    const arms = mood === 'celebrating'
+      ? `<path d="M22 52 L9 33 M78 52 L91 33" stroke="${INK}" stroke-width="3.5" stroke-linecap="round"/>
+         <path d="M7 16 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2z M93 12 l1.6 4 4 1.6 -4 1.6 -1.6 4 -1.6 -4 -4 -1.6 4 -1.6z" fill="#FFD166"/>`
+      : `<path d="M22 56 Q15 62 17 70 M78 56 Q85 62 83 70" fill="none" stroke="${INK}" stroke-width="3.5" stroke-linecap="round"/>`;
+    return `<svg class="pearl ${mood}" viewBox="0 0 100 110" ${attrs || ''} role="img" aria-label="${escHtml(mascotName())}, ${mood}">
+      <g class="body">${arms}
+        <path d="M50 15 C62 8 81 12 80 32 C80 52 76 62 72 82 C70 94 64 102 59 97 C55 93 56 78 50 76 C44 78 45 93 41 97 C36 102 30 94 28 82 C24 62 20 52 20 32 C19 12 38 8 50 15 Z"
+              fill="#FFFFFF" stroke="${INK}" stroke-width="3.5" stroke-linejoin="round"/>
+        <path d="M30 27 Q33 19 41 18" fill="none" stroke="#2EC4B6" stroke-width="3" stroke-linecap="round" opacity=".6"/>
+        <circle cx="32" cy="50" r="5" fill="#FF8FA3" opacity=".45"/><circle cx="68" cy="50" r="5" fill="#FF8FA3" opacity=".45"/>
+        ${faces[mood] || faces.happy}
+      </g></svg>`;
+  }
+  const mascotName = () => (S && S.settings && S.settings.mascot_name) || 'Pearl';
+
+  let lastMood = '', lastLine = '', lastName = '';
+  function buddy(L) {
+    const t = S.tray, now = serverNow(), hr = new Date(now).getHours();
+    const closed = L.worn >= S.target * 60, tick = Math.floor(now / 6e5);   // line rotates every 10 min
+    let mood, lines;
+    if (L.isOut && L.openMin >= S.nudge) { mood = 'worried'; lines = [`Psst… it's been ${Math.floor(L.openSec / 60)} min.`, `${Math.floor(L.openSec / 60)} min and counting. Pop me back in?`]; }
+    else if (L.isOut) { mood = 'snacking'; lines = ["Enjoy! Timer's running.", "Chew happy. I'll keep count.", 'Brush, then pop me back in.']; }
+    else if (closed) { mood = 'celebrating'; lines = ['Ring closed! Look at us.', `${hm(L.worn)} today. Gold-star teeth.`]; }
+    else if (t.day > t.planned) { mood = 'worried'; lines = [`Tray ${t.no + 1} is waiting for you!`]; }
+    else if (hr >= S.settings.checkin_hour || hr < 6) { mood = 'sleepy'; lines = ["Night shift. I've got this.", 'Sweet dreams. Keep them in.']; }
+    else if (L.budget < 0) { mood = 'happy'; lines = [`We went ${hm(-L.budget)} over today. No stress, keep them in.`]; }
+    else { mood = 'happy'; lines = ['Snug and sparkly. Keep going.', `${hm(L.budget)} of break budget left. We're cruising.`, `Day ${t.day} of ${t.planned}. Tray ${t.no + 1} is on the horizon.`]; }
+    const line = lines[tick % lines.length], name = mascotName();
+    if (mood !== lastMood || name !== lastName) {
+      $('buddy-pearl').innerHTML = pearl(mood); $('buddy-name').textContent = name;
+      lastMood = mood; lastName = name;
+    }
+    if (line !== lastLine) { $('buddy-line').textContent = line; lastLine = line; }
+  }
+  function hop() { const b = $('buddy'); b.classList.remove('hop'); void b.offsetWidth; b.classList.add('hop'); }
+
+  /* ---------- Journey map (Tray tab) ---------- */
+  let lastJourneyTray = null, selStop = null;
+  function renderJourney() {
+    const t = S.tray, total = t.total, cur = t.no, grades = {};
+    S.history.trays.forEach(x => { grades[x.no] = x; });
+    const COLS = 5, X0 = 56, DX = 57, Y0 = 74, DY = 92, R = DY / 2;
+    const pt = i => { const r = Math.floor(i / COLS), c = i % COLS; return { x: r % 2 ? X0 + (COLS - 1 - c) * DX : X0 + c * DX, y: Y0 + r * DY, r }; };
+    const pts = Array.from({ length: total + 1 }, (_, i) => pt(i));
+    const pathTo = n => pts.slice(0, n + 1).map((p, i) => {
+      if (!i) return `M${p.x} ${p.y}`;
+      const q = pts[i - 1];
+      return p.r === q.r ? `L${p.x} ${p.y}` : `A${R} ${R} 0 0 ${q.r % 2 ? 0 : 1} ${p.x} ${p.y}`;
+    }).join(' ');
+    const H = pts[total].y + 62, half = Math.ceil(total / 2);
+    const done = cur - 1;
+    $('o-pct').textContent = `${Math.round((done / total) * 100)}% · ${done} of ${total} done`;
+
+    let s = `<svg viewBox="0 0 340 ${H}" role="img" aria-label="Journey map: tray ${cur} of ${total}">`;
+    s += `<path d="${pathTo(total)}" style="fill:none; stroke:var(--line)" stroke-width="6" stroke-linecap="round" stroke-dasharray="1 11"/>`;
+    if (done > 0) s += `<path class="trail-done" pathLength="1" d="${pathTo(done)}" style="fill:none; stroke:var(--mint)" stroke-width="6" stroke-linecap="round"/>`;
+
+    for (let i = 0; i < total; i++) {
+      const p = pts[i], no = i + 1, g = grades[no];
+      s += `<g class="stop" data-no="${no}">`;
+      if (no < cur) {
+        s += `<circle cx="${p.x}" cy="${p.y}" r="15" fill="${g ? GRADE_FILL[g.grade] : '#2EC4B6'}"/>`;
+        s += `<text x="${p.x}" y="${p.y + 5}" text-anchor="middle" font-family="Outfit,sans-serif" font-weight="700" font-size="14" fill="#fff">${g ? g.grade : '✓'}</text>`;
+      } else if (no === cur) {
+        s += `<circle class="now-ring" cx="${p.x}" cy="${p.y}" r="18" style="fill:none; stroke:var(--mint)" stroke-width="3"/>`;
+        s += `<circle cx="${p.x}" cy="${p.y}" r="18" style="fill:var(--card); stroke:var(--mint)" stroke-width="3.5"/>`;
+        s += `<text x="${p.x}" y="${p.y + 5}" text-anchor="middle" font-family="Outfit,sans-serif" font-weight="700" font-size="15" style="fill:var(--ink)">${no}</text>`;
+        s += `<text x="${p.x}" y="${p.y + 36}" text-anchor="middle" font-size="11" font-weight="600" style="fill:var(--ink)">Day ${Math.min(t.day, t.planned)}/${t.planned}</text>`;
+      } else {
+        s += `<circle cx="${p.x}" cy="${p.y}" r="13" style="fill:var(--card); stroke:var(--line)" stroke-width="2"/>`;
+        s += `<text x="${p.x}" y="${p.y + 4}" text-anchor="middle" font-size="11" font-weight="500" style="fill:var(--muted)">${no}</text>`;
+      }
+      if (no === half && no !== cur) s += `<text x="${p.x}" y="${p.y + 32}" text-anchor="middle" font-size="10" font-weight="600" style="fill:var(--muted)">HALFWAY</text>`;
+      s += `<circle cx="${p.x}" cy="${p.y}" r="24" fill="transparent"/></g>`;
+    }
+
+    const f = pts[total];
+    s += `<g class="stop" data-no="finish">
+      <line x1="${f.x - 6}" y1="${f.y + 14}" x2="${f.x - 6}" y2="${f.y - 22}" style="stroke:var(--ink)" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M${f.x - 5} ${f.y - 22} L${f.x + 16} ${f.y - 15} L${f.x - 5} ${f.y - 8} Z" fill="#FFD166"/>
+      <text x="${f.x}" y="${f.y + 32}" text-anchor="middle" font-family="Outfit,sans-serif" font-size="12" font-weight="700" style="fill:var(--ink)">Smile day</text>
+      <text x="${f.x}" y="${f.y + 46}" text-anchor="middle" font-size="10.5" style="fill:var(--muted)">${fmtDate(S.finish, true)}</text>
+      <circle cx="${f.x}" cy="${f.y}" r="26" fill="transparent"/></g>`;
+
+    // Pearl stands on the current stop; on a tray change she hops from the old one
+    const at = n => { const p = pts[Math.min(n, total) - 1]; return `translate(${p.x - 24}px, ${p.y - 68}px)`; };
+    const from = lastJourneyTray && lastJourneyTray !== cur ? lastJourneyTray : cur;
+    s += `<g class="walker" id="walker" style="transform:${at(from)}">${pearl('proud', 'width="48" height="53"')}</g>`;
+    s += '</svg>';
+    $('journey').innerHTML = s;
+    if (from !== cur) requestAnimationFrame(() => requestAnimationFrame(() => { $('walker').style.transform = at(cur); }));
+    lastJourneyTray = cur;
+
+    $('journey').querySelectorAll('.stop').forEach(el => el.onclick = () => { selStop = el.dataset.no; stopInfo(); });
+    stopInfo();
+  }
+
+  function stopInfo() {
+    const t = S.tray, no = selStop === 'finish' ? 'finish' : Number(selStop || t.no);
+    const g = S.history.trays.find(x => x.no === no);
+    let html;
+    if (no === 'finish') html = `<b>Smile day</b> · projected ${fmtDate(S.finish, true)} · ${t.total - t.no + 1} trays to go`;
+    else if (no < t.no) html = g ? `<b>Tray ${no}</b> · ${fmtDate(g.start)} – ${g.end ? fmtDate(g.end) : '…'} · <b>${h1(g.avg)}h</b> avg · grade <b>${g.grade}</b>`
+                                  : `<b>Tray ${no}</b> · done before tracking started`;
+    else if (no === t.no) html = `<b>Tray ${no}</b> · now · day ${t.day} of ${t.planned} · due ${fmtDate(t.due)}` + (g ? ` · ${h1(g.avg)}h avg so far` : '');
+    else {
+      const days = S.settings.days_per_tray, start = new Date(new Date(t.due + 'T12:00:00').getTime() + (no - t.no - 1) * days * 864e5);
+      html = `<b>Tray ${no}</b> · starts around ${start.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`;
+    }
+    $('stop-info').innerHTML = html;
+  }
+
+  /* ---------- History (on data change) ---------- */
+  function renderHistory() {
+    if (!S) return;
+    const H = S.history, st = H.stats;
+    $('tiles').innerHTML = st ? `
+      <div class="tile"><div class="v">${h1(st.avgWear)}<small>h</small></div><div class="l">avg wear, last ${st.days} days</div></div>
+      <div class="tile"><div class="v">${st.greenPct}<small>%</small></div><div class="l">days on target</div></div>
+      <div class="tile"><div class="v">${st.avgBreak}<small>m</small></div><div class="l">average break</div></div>`
+      : `<div class="tile" style="grid-column:1/-1"><div class="empty-pearl">${pearl('happy')}<div class="l">Stats appear after your first full day. I'm counting!</div></div></div>`;
+    $('shield-note').textContent = S.shields ? `🛡 ${S.shields} shield${S.shields > 1 ? 's' : ''} ready` : '';
+
+    const days = H.days, lead = (new Date(days[0].key + 'T12:00:00').getDay() + 6) % 7;
+    let html = ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(d => `<div class="wd">${d}</div>`).join('');
+    html += '<div></div>'.repeat(lead);
+    html += days.map((d, i) => `<button class="cell s-${d.status}${d.key === selKey ? ' sel' : ''}" data-k="${d.key}"
+      style="animation-delay:${i * 12}ms" ${d.status === 'none' ? 'disabled' : ''}>${Number(d.key.slice(8))}${d.saved ? '<span class="sh">🛡</span>' : ''}</button>`).join('');
+    $('heat').innerHTML = html;
+    $('heat').querySelectorAll('.cell[data-k]').forEach(c => c.onclick = () => { selKey = c.dataset.k; renderHistory(); });
+
+    renderDay();
+
+    $('trays').innerHTML = H.trays.length ? H.trays.map(t => {
+      const pct = Math.max(4, Math.min(100, ((t.avg - 18) / 6) * 100)), mark = ((S.target - 18) / 6) * 100;
+      return `<div class="tr"><span class="n">Tray <b>${t.no}</b></span>
+        <div class="tb"><i style="width:${pct}%"></i><u style="left:${mark}%"></u></div>
+        <span class="num">${h1(t.avg)}h</span><span class="grade g-${t.grade}">${t.grade}</span></div>`;
+    }).join('') + `<div class="empty">Line marks your ${S.target}h target${H.trays.some(t => t.current) ? ' · current tray grade updates daily' : ''}.</div>`
+      : '<div class="empty">Grades appear after your first full day.</div>';
+
+    const B = H.bests;
+    $('bests').innerHTML = `
+      <div class="best"><div class="v">${B.longest || 0}<small style="font-size:13px"> days</small></div><div class="l">Longest streak</div></div>
+      <div class="best"><div class="v">${B.bestDay ? h1(B.bestDay.wear) + 'h' : '–'}</div><div class="l">Best day${B.bestDay ? ' · ' + fmtDate(B.bestDay.key) : ''}</div></div>
+      <div class="best"><div class="v">${B.bestTray ? '#' + B.bestTray.no + ' ' + B.bestTray.grade : '–'}</div><div class="l">Best tray${B.bestTray ? ' · ' + h1(B.bestTray.avg) + 'h' : ''}</div></div>`;
+  }
+
+  function renderDay() {
+    const d = S.history.days.find(x => x.key === selKey);
+    const d0 = new Date(selKey + 'T00:00:00'), d1 = new Date(d0); d1.setDate(d1.getDate() + 1);
+    const start = d0.getTime(), end = d1.getTime();
+    const list = S.breakList.filter(b => b.out < end && (b.inn || serverNow()) > start).sort((a, b) => a.out - b.out);
+    const isToday = d.status === 'today';
+    const summary = d.status === 'none' ? 'Not tracked'
+      : isToday ? `${list.length} break${list.length === 1 ? '' : 's'} so far`
+      : `${h1(d.wear)}h worn · ${d.breaks} break${d.breaks === 1 ? '' : 's'} · ${hm(d.out)} out`;
+    $('day-card').innerHTML = `
+      <div class="day-head"><b>${isToday ? 'Today' : fmtDay(selKey)}</b><span class="sub">${summary}</span></div>
+      ${list.length ? list.map(b => `<button class="brk${b.inn ? '' : ' open'}" data-id="${b.id}">
+          <span>${fmtTime(b.out)} → ${b.inn ? fmtTime(b.inn) : 'now'}</span>
+          <span class="d">${b.inn ? hm((b.inn - b.out) / 6e4) : 'open'} ›</span></button>`).join('')
+        : '<div class="empty">No breaks logged this day.</div>'}
+      <button class="add" id="add-brk">+ Add a break</button>`;
+    $('day-card').querySelectorAll('.brk').forEach(el => el.onclick = () => openEditor(S.breakList.find(b => b.id === el.dataset.id)));
+    $('add-brk').onclick = () => openEditor(null);
+  }
+
+  /* ---------- break editor ---------- */
+  function openEditor(b) {
+    editing = b;
+    $('e-title').textContent = b ? 'Edit break' : 'Add a break';
+    let out, inn;
+    if (b) { out = b.out; inn = b.inn; }
+    else {
+      const now = serverNow(), start = new Date(selKey + 'T00:00:00').getTime();
+      out = selKey === keyOf(now) ? now - 30 * 6e4 : start + 13 * 36e5;
+      inn = out + 30 * 6e4;
+    }
+    $('e-out').value = toInput(out);
+    $('e-in').value = inn ? toInput(inn) : '';
+    $('e-in').placeholder = 'still out';
+    $('e-del').style.display = b ? 'block' : 'none';
+    $('e-err').textContent = '';
+    $('ed').classList.add('show');
+  }
+  $('e-cancel').onclick = () => $('ed').classList.remove('show');
+  $('e-save').onclick = async () => {
+    const out = $('e-out').value ? new Date($('e-out').value).getTime() : null;
+    const inn = $('e-in').value ? new Date($('e-in').value).getTime() : null;
+    if (!out) { $('e-err').textContent = 'Add the time you took them out.'; return; }
+    if (!inn && !(editing && !editing.inn)) { $('e-err').textContent = 'Add the time you put them back in.'; return; }
+    $('e-save').disabled = true;
+    try {
+      setState(await gs('saveBreak', { id: editing ? editing.id : null, out, inn }));
+      $('ed').classList.remove('show'); toast('Break saved.');
+    } catch (e) { $('e-err').textContent = (e && e.message) || 'Could not save.'; }
+    $('e-save').disabled = false;
+  };
+  $('e-del').onclick = async () => {
+    if (!editing) return;
+    $('e-del').disabled = true;
+    try { setState(await gs('deleteBreak', editing.id)); $('ed').classList.remove('show'); toast('Break deleted.'); }
+    catch (e) { $('e-err').textContent = (e && e.message) || 'Could not delete.'; }
+    $('e-del').disabled = false;
+  };
+
+  /* ---------- First-run setup ---------- */
+  function showSetup(s) {
+    document.body.classList.add('setup-mode');
+    $('setup-pearl').innerHTML = pearl('happy');
+    if (!$('s-start_date').value) $('s-start_date').value = keyOf(Date.now());
+    $('s-start_date').max = keyOf(Date.now());
+  }
+  $('setup-go').onclick = async () => {
+    const obj = {};
+    ['total_trays', 'current_tray', 'start_date', 'days_per_tray', 'target_hours', 'mascot_name'].forEach(k => obj[k] = $('s-' + k).value);
+    $('setup-go').disabled = true;
+    try {
+      setState(await gs('completeSetup', obj));
+      if (window.confetti) confetti({ particleCount: 140, spread: 90, origin: { y: 0.35 }, colors: COLORS });
+      toast(`${mascotName()} is ready. Let's do this!`);
+    } catch (e) { fail(e); }
+    $('setup-go').disabled = false;
+  };
+
+  /* ---------- Settings ---------- */
+  const FIELDS = ['target_hours', 'amber_hours', 'days_per_tray', 'total_trays', 'nudge_minutes', 'checkin_hour', 'mascot_name'];
+  function fillSettings() {
+    if (document.activeElement && document.activeElement.id && document.activeElement.id.indexOf('f-') === 0) return;
+    FIELDS.forEach(k => { $('f-' + k).value = S.settings[k]; });
+    $('demo-card').style.display = S.hasDemo ? 'block' : 'none';
+    if (S.sheetUrl) $('sheet-link').href = S.sheetUrl;
+  }
+  $('save-settings').onclick = async () => {
+    const obj = {}; FIELDS.forEach(k => obj[k] = $('f-' + k).value);
+    $('save-settings').disabled = true;
+    try { document.activeElement.blur(); setState(await gs('saveSettings', obj)); toast('Settings saved.'); }
+    catch (e) { fail(e); }
+    $('save-settings').disabled = false;
+  };
+  $('clear-demo').onclick = () => modal({
+    title: 'Remove demo data?', sub: 'All practice breaks and demo trays go. Your real logs stay.',
+    ok: 'Remove', cancel: 'Keep it',
+    onOk: async () => {
+      try { setState(await gs('clearDemoData')); toast('Demo data removed. Fresh start.'); } catch (e) { fail(e); }
+    }
+  });
+
+  /* ---------- actions ---------- */
+  $('hero').onclick = async () => {
+    if (busy || !S) return;
+    const L = live(); if (!L) return;
+    const action = L.isOut ? 'in' : 'out', ts = serverNow();
+    if (action === 'out') { S.openOutMs = ts; S.breaks += 1; }      // optimistic: flips instantly
+    else { S.closedOutMin += L.openMin; S.openOutMs = null; hop(); }
+    const q = queue(); q.push({ action, ts }); saveQueue(q);
+    busy = true; render();
+    try {
+      const s = await flush();
+      if (s) setState(s);
+    } catch (e) {
+      if (isNet(e)) toast('Offline. Your tap is saved and will sync.');
+      else { saveQueue([]); fail(e); load(); }
+    }
+    busy = false; render(); syncNote();
+  };
+
+  $('next').onclick = () => {
+    const t = S.tray;
+    modal({
+      title: `Switch to tray ${t.no + 1}?`,
+      sub: t.redDays >= 3
+        ? `${t.redDays} low-wear days on tray ${t.no}. Your orthodontist may want you to stay longer. Switch anyway?`
+        : `Tray ${t.no} closes today and tray ${t.no + 1} starts now. A calendar reminder is set for its due date.`,
+      ok: 'Switch now', cancel: 'Not yet',
+      onOk: async () => {
+        busy = true; render();
+        try {
+          const r = await gs('startNextTray');
+          setState(r.state); levelUp(r.closed, r.state.tray);
+        } catch (e) { fail(e); load(); }
+        busy = false; render();
+      }
+    });
+  };
+
+  /* ---------- celebrations ---------- */
+  function celebrateRing() {
+    celebrated = true; store.set('ring-' + S.todayStart, '1');
+    if (window.confetti) confetti({ particleCount: 120, spread: 80, origin: { y: 0.35 }, colors: COLORS });
+    toast('Ring closed. Your teeth say thanks.');
+  }
+  function levelUp(closed, t) {
+    if (window.confetti) {
+      confetti({ particleCount: 160, spread: 100, origin: { y: 0.4 }, colors: COLORS });
+      setTimeout(() => confetti({ particleCount: 80, spread: 120, origin: { y: 0.3 }, colors: COLORS }), 300);
+    }
+    const g = closed && closed.grade;
+    const word = { A: 'Nailed it.', B: 'Solid.', C: 'Room to grow.' }[g] || '';
+    modal({
+      badge: g, pearlMood: 'celebrating',
+      title: `Tray ${t.no} unlocked`,
+      sub: (g ? `${word} Tray ${closed.no} averaged ${h1(closed.avg)}h a day. ` : '') +
+           `${t.total - t.no} to go. Next switch: ${fmtDate(t.due)}.`,
+      ok: "Let's go"
+    });
+  }
+
+  /* ---------- UI helpers ---------- */
+  function modal({ title, sub, ok, cancel, onOk, badge, pearlMood }) {
+    $('m-pearl').style.display = pearlMood ? 'block' : 'none';
+    $('m-pearl').innerHTML = pearlMood ? pearl(pearlMood, 'width="84" height="92"') : '';
+    const bd = $('m-badge');
+    bd.style.display = badge ? 'flex' : 'none';
+    bd.className = 'badge' + (badge ? ' g-' + badge : ''); bd.textContent = badge || '';
+    $('m-title').textContent = title; $('m-sub').textContent = sub;
+    $('m-ok').textContent = ok || 'OK';
+    $('m-cancel').style.display = cancel ? 'block' : 'none';
+    $('m-cancel').textContent = cancel || '';
+    $('ov').classList.add('show');
+    $('m-ok').onclick = () => { $('ov').classList.remove('show'); if (onOk) onOk(); };
+    $('m-cancel').onclick = () => $('ov').classList.remove('show');
+  }
+  let toastTimer;
+  function toast(msg) {
+    const el = $('toast'); el.textContent = msg; el.classList.add('show');
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 3200);
+  }
+  function fail(e) { toast((e && e.message) || 'Something went wrong. Try again.'); }
+
+  document.querySelectorAll('nav button[data-go]').forEach(btn => btn.onclick = () => {
+    document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === btn.dataset.go));
+    document.querySelectorAll('nav button').forEach(x => x.classList.toggle('active', x === btn));
+    if (btn.dataset.go === 'history') renderHistory();
+    window.scrollTo(0, 0);
+  });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
+  window.addEventListener('online', load);
+
+  setInterval(render, 1000);
+  load();
+</script>
+</body>
+</html>
