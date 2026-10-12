@@ -22,6 +22,7 @@ It runs entirely on **your own Google account**: a Google Sheet is the database,
 | **History** | 5-week heatmap, 30-day stats, per-tray grades (A/B/C), personal bests, and editing of any break. |
 | **Gamification** | Streaks with shields (earn one per 7 on-target days; it saves an "almost" day), tray level-ups, and a journey map from tray 1 to *Smile day*. |
 | **Pearl** | A tooth mascot with moods (happy, snacking, worried, sleepy, celebrating) and a speech bubble. Rename her in Settings. |
+| **Brace** | Pearl's shield buddy. He fills up as you earn your next shield (meter on Home; tap for details), steps in with a *Blocked!* moment when a shield saves your streak, and marks saved days on the heatmap. |
 | **Your data** | Everything lives in your Google Sheet. Export it anytime with File → Download. |
 
 ## What you need

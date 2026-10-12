@@ -540,14 +540,14 @@ function history_(sum, trays, cfg, nowMs) {
   const done = sum.filter(d => d.status !== 'today');
 
   // Streak with shields: 1 shield per 7 green days (max 2); a shield absorbs one amber day
-  let streak = 0, longest = 0, shields = 0, greens = 0;
+  let streak = 0, longest = 0, shields = 0, greens = 0, earnedTotal = 0, lastSaved = null;
   const saved = {};
   done.forEach(d => {
     if (d.status === 'green') {
       streak++; greens++;
-      if (greens % 7 === 0 && shields < 2) shields++;
+      if (greens % 7 === 0 && shields < 2) { shields++; earnedTotal++; }
     } else if (d.status === 'amber' && shields > 0) {
-      shields--; saved[d.key] = true;
+      shields--; saved[d.key] = true; lastSaved = { key: d.key, streak: streak };
     } else {
       streak = 0; greens = 0;
     }
@@ -588,6 +588,12 @@ function history_(sum, trays, cfg, nowMs) {
 
   return {
     streak: streak, shields: shields, days: days, trays: trayStats, stats: stats,
+    brace: {                                   // Brace, the shield buddy
+      shields: shields, max: 2, every: 7,
+      progress: shields >= 2 ? 7 : greens % 7, // on-target days toward the next shield
+      earnedTotal: earnedTotal,                // app compares with what it last saw → "shield earned"
+      lastSaved: lastSaved                     // most recent amber day a shield saved → "Blocked!" modal
+    },
     bests: {
       longest: longest,
       bestDay: bestDay ? { key: bestDay.key, wear: bestDay.wear } : null,
