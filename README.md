@@ -9,6 +9,7 @@ It runs entirely on **your own Google account**: a Google Sheet is the database,
   <img src="docs/screenshots/home.png" width="190" alt="Home: wear ring and Out/In button">
   <img src="docs/screenshots/tray.png" width="190" alt="Tray: journey map">
   <img src="docs/screenshots/history.png" width="190" alt="History: heatmap and breaks">
+  <img src="docs/screenshots/brace.png" width="190" alt="Brace: shield progress">
 </p>
 
 ## Features
